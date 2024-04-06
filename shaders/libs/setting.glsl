@@ -1,208 +1,111 @@
-//Option
-#define Auto -2
-#define OFF -1
-#define Low 0
-#define Medium 1
-#define High 2
-#define Ultra 3
-
-#define PCSS 0
-#define Vaule 1
-
-#define RGB 0
-#define Color_Temperature 1
-
-#define Shadow_Light 0 
-#define Sun 1
-#define Moon 2
-#define Both 3
-
-#define Default 0
-#define Custom 1
-
-//Lighting Setting
-#define Sun_Light_Luminance 4.0
-#define Sky_Light_Luminance 0.7
-#define Moon_Light_Luminance 0.5
-#define Blocks_Light_Luminance 1.0
-#define Nature_Light_Min_Luminance 0.1
-
-#define RSMGI_Luminance 256.0                       //[128.0 192.0 256.0 384.0 512.0]
-#define RSMGI_Albedo_Luminance_Boost 0.75            //[0.0 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0]
-#define RSMGI_Albedo_Saturation 0.8                 //[0.0 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0 1.05 1.1 1.15 1.2 1.25 1.3 1.35 1.4 1.45 1.5 1.55 1.6 1.65 1.7 1.75 1.8]
-#define RSMGI_Temporal_Blend 4.0
-#define RSMGI_Noodle_Error_Disabled
-    #define RSMGI_Noodle_Error_Distance 2.0         //[1.0 1.5 2.0 2.5]
-//#define RSMGI_Disabled_Sun_Angle
-#define RSMGI_Render_Scale 0.5
-
-//Blocks Light
-#define Held_Light_Quality Medium                   //[Medium High]
-#define Blocks_Light_Color Color_Temperature        //[RGB Color_Temperature]
-#define Blocks_Light_Color_Temperture 2500.0        //[1700.0 1850.0 2000.0 2500.0 3000.0 3200.0 3275.0 3380.0 5000.0 5500.0 6000.0 6500.0 7000.0 8000.0]
-#define Blocks_Light_Color_R 1.0                    //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
-#define Blocks_Light_Color_G 0.7                    //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
-#define Blocks_Light_Color_B 0.3                    //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
-#define Blocks_Light_Intensity 1.0                  //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
-
-//Sun Light
-#define Soft_Shadow_Quality High                    //[OFF High Ultra]
-#define Soft_Shadow_Penumbra PCSS                   //[PCSS 1 2 4 8 16 32]
-
-#define Enabled_Screen_Space_Contact_Shadow         //
-
-//Ambient Light
-#define SSAO_Quality OFF                            //[OFF Medium High] HBAO quality
-    #define SSAO_Falloff 0.5                        //
-    #define SSAO_Bias 0.0                           //
-    #define SSAO_Direction_Step 12                  //
-    #define SSAO_Rotation_Step 4                    //
-    #define SSAO_Radius 0.8                         //
-    #define SSAO_Low_Resolution                     //half resolution render ssao
-
-//#define Disabled_Sky_Occlusion
-#define Sky_Light_Level_Min 0                       //[0 1 2 3 4 5 6 7 8 9 10 11 12 13 14]
-
-//Materials
-#define BRDF_Roughness_Bias 0.7
-
-#define Parallax_Mapping
-#define Parallax_Mapping_Quality Medium             //[Medium High Ultra]
-#define Parallax_Mapping_Distance 32.0              //
-#define Texture_Tile_Resolution 16.0                //[1.0 2.0 4.0 8.0 16.0 32.0 64.0 128.0 256.0 512.0 1024.0 2048.0 4096.0 8192.0]
-#define Auto_Detect_Tile_Resolution
-#define Mipmaps_Levels 2.0                          //[1.0 2.0 3.0 4.0]
-#define Parallax_Self_Shadow
-#define Parallax_Self_Shadow_Quality Medium         //[Medium High Ultra]
-#define Parallax_Self_Shadow_Pixel
-#define Pixel_Shadow_Resolution 2.0                 //[1.0 2.0 4.0 8.0]
-#define Parallax_Self_Shadow_Length 0.1             //[0.02 0.04 0.06 0.08 0.1 0.12 0.14 0.16 0.18 0.2]
-#define Parallax_Self_Shadow_Diffcent 0.04          //[0.005 0.01 0.02 0.04 0.06 0.08 0.1 0.12]
-
-#define Small_SlimeBlock_Density 8.0                //[0.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0 11.0 12.0 13.0 14.0 15.0]
-#define Small_HoneyBlock_Density 8.0                //[0.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0 11.0 12.0 13.0 14.0 15.0]
-
-#define Translucent_Blocks_Quality High             //[Low High]
-
-#define Screen_Space_Reflection Medium              //[Medium High Ultra]
-#define Enabled_Environment_Map
-
-//Atmosphere
-#define Altitude_Scale 1.0                          //[1.0 10.0 25.0 50.0 75.0 100.0 250.0 500.0 750.0 1000.0]
-
-#define Clouds_Quality High                         //[Medium High Ultra]
-
-#define Clouds_Sun_Lighting_Tracing High            //[Medium Hight Ultra]
-#define Clouds_Moon_Lighting_Tracing Medium         //[Medium Hight Ultra]
-    #define Clouds_Tracing_Light_Source Shadow_Light //[Shadow_Light Sun Moon Both]
-    #define Clouds_Self_Shadow_Detail Low           //[Low High]
-
-#define Clouds_Sun_Lighting_Color Medium            //[Low Medium Ultra]
-#define Clouds_Moon_Lighting_Color Low              //[Low Medium Ultra]
-
-#define Clouds_Shadow_Quality Medium                //[OFF Medium High Ultra]
-#define Clouds_Shadow_Transmittance 0.5             //[0.01 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0]
-#define Clouds_Shadow_Tracing_Bottom 0.1            //[0.0 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0]
-#define Clouds_Shadow_Tracing_Top 0.7               //[0.0 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0]
-
-#define Clouds_Sky_Occlusion_Quality Medium         //[OFF Medium High Ultra]
-#define Clouds_Sky_Occlusion_Transmittance 0.2      //[0.01 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0]
-#define Clouds_Sky_Occlusion_Tracing_Bottom 0.1     //[0.0 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0]
-#define Clouds_Sky_Occlusion_Tracing_Top 0.7        //[0.0 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0]
-
-//#define Clouds_Shadow_On_Atmosphric_Scattering      //WIP
-
-#define Clouds_Speed 1.0                            //[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0]
-#define Clouds_X_Speed 30.0
-#define Clouds_Vertical_Speed -45.0
-
-#define Near_Atmosphere_Upscale_Quality Medium      //[Medium High] medium:only temporal filter, high:spatio and temporal filter
-
-#define Near_Atmosphere_Quality High                //[Medium High Ultra]
-    #define Near_Atmosphere_Density 20.0            //[1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0]
-    #define Near_Atmosphere_Height 1.0              //[1.0 10.0 50.0 100.0 500.0 1000.0]
-
-#define Near_Atmospheric_Scattering_Max_Tracing 4000.0 //lower vaule cause clouds edge or far environment look weird
-
-#define Sky_Distance_Above_Clouds 2000.0
-
-#define Far_Atmosphere_Quality High                 //[Medium High Ultra]
-#define Far_Atmosphere_Planet_Shadow
-
-#define Near_Atmosphere_End 0.0
-
-#define Atmosphere_Shape Sphere                     //[Sphere Cube]
-
-#define Planet_Radius 6360000.0                     //[]
-#define Atmosphere_Radius 6420000.0                 //[]
-
-#define Atmosphere_Profile Earth_Like               //[Default Custom]
-
-#define Rayleigh_Scattering 1.0                     //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
-#define Rayleigh_Absorption 0.0                     //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
-#define Rayleigh_Transmittance_R 4.0                //[1.0 2.0 4.0 6.0 8.0 10.0 12.0 14.0 16.0 18.0 20.0 22.0 24.0 26.0 28.0 30.0 32.0 34.0]
-#define Rayleigh_Transmittance_G 12.0               //[1.0 2.0 4.0 6.0 8.0 10.0 12.0 14.0 16.0 18.0 20.0 22.0 24.0 26.0 28.0 30.0 32.0 34.0]
-#define Rayleigh_Transmittance_B 32.0               //[1.0 2.0 4.0 6.0 8.0 10.0 12.0 14.0 16.0 18.0 20.0 22.0 24.0 26.0 28.0 30.0 32.0 34.0]
-#define Rayleigh_Distribution 8000.0                //[500.0 1000.0 1500.0 2000.0 2500.0 3000.0 3500.0 4000.0 4500.0 5000.0 5500.0 6000.0 6500.0 7000.0 7500.0 8000.0 8500.0 9000.0 9500.0 10000.0]
-
-#define Mie_Scattering 1.0                          //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
-#define Mie_Absorption 0.1                          //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
-#define Mie_Transmittance_R 4.0                     //[1.0 2.0 4.0 6.0 8.0 10.0 12.0 14.0 16.0 18.0 20.0 22.0 24.0 26.0 28.0 30.0 32.0 34.0]
-#define Mie_Transmittance_G 4.0                     //[1.0 2.0 4.0 6.0 8.0 10.0 12.0 14.0 16.0 18.0 20.0 22.0 24.0 26.0 28.0 30.0 32.0 34.0]
-#define Mie_Transmittance_B 4.0                     //[1.0 2.0 4.0 6.0 8.0 10.0 12.0 14.0 16.0 18.0 20.0 22.0 24.0 26.0 28.0 30.0 32.0 34.0]
-#define Mie_Distribution 1000.0                     //[500.0 1000.0 1500.0 2000.0 2500.0 3000.0 3500.0 4000.0 4500.0 5000.0 5500.0 6000.0 6500.0 7000.0 7500.0 8000.0 8500.0 9000.0 9500.0 10000.0]
-
-#define Ozone_Scattering 0.0                        //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
-#define Ozone_Absorption 1.0                        //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
-#define Ozone_Transmittance_R 0.41112               //[]
-#define Ozone_Transmittance_G 0.99576               //[]
-#define Ozone_Transmittance_B 0.00427               //[]
-#define Ozone_Height_Height 25000.0                 //[]
-#define Ozone_Height_Thickness 15000.0              //[]
-
-//Sky
-#define Moon_Texture_Luminance 4.0                  //[1.0 2.0 3.0 4.0 5.0 6.0 7.0]
-#define Moon_Radius 1.0                             //[0.125 0.25 0.5 1.0 2.0 4.0 8.0]
-#define Moon_Distance 1.0                           //[0.125 0.25 0.5 1.0 2.0 4.0 8.0]
-
-#define Stars_Fade_In 0.1                           //[0.01 0.05 0.1 0.15 0.2]
-#define Stars_Fade_Out 0.0                          //[-1.0 -0.25 -0.2 -0.15 -0.1 -0.05 0.0]
-#define Stars_Visible 0.005                         //[0.00062 0.00125 0.0025 0.005 0.01 0.02 0.04]
-#define Stars_Luminance 0.1                         //[0.1 0.25 0.5 0.75 1.0 2.5 5.0 7.5 10.0 25.0 50.0 75.0 100.0]
-#define Stars_Speed 1.0                             //[0.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0]
-#define Planet_Angle 0.1                            //[-0.3 -0.2 -0.1 0.0 0.1 0.2 0.3 0.4 0.5] +:north -:south
-
-#define Polaris_Size 2.0                            //[1.0 2.0 3.0 4.0]
-#define Polaris_Luminance 1.0                       //[1.0]
-#define Polaris_Offset_X 4.0                        //[1.0 2.0 3.0 4.0 5.0 6.0 7.0]
-#define Polaris_Offset_Y 4.0                        //[1.0 2.0 3.0 4.0 5.0 6.0 7.0]
-
-//Camera Settings
-#define Camera_ISO 200                              //[25 50 100 200 400 800 1600]
-
-#define Camera_Exposure_Value 0.0                   //[-4.0 -3.0 -2.0 -1.0 0.0 1.0 2.0 3.0 4.0]
-#define Camera_Exposure_Min_EV -2.0                 //[-5.0 -4.0 -3.5 -3.0 -2.5 -2.0 -1.5 -1.0 -0.5 0.0 1.0]
-#define Camera_Exposure_Max_EV 6.0                  //[3.0 4.0 4.5 5.0 5.5 6.0 6.5 7.0 7.5 8.0 9.0]
-
-#define Camera_Average_Exposure                     //
-#define Camera_Exposure_Delay 2.0                   //[0.5 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0]
-
-//#define Camera_DOF                                  //
-#define Camera_Aperture 2.8                         //[1.0 1.4 2.0 2.8 4.0 5.6 8.0 11.0 16.0 22.0 32.0 44.0 64.0 6400.0]
-#define Camera_Focal_Length 0.004                   //[0.001 0.002 0.003 0.004 0.005 0.006 0.007 0.008 0.009 0.01 0.02 0.03 0.04 0.05 0.06 0.07 0.08 0.09 0.1]
-#define Camera_Focal_Distance_Auto                  //
-#define Camera_Focal_Distance 1.0                   //[0.25 0.5 0.75 1.0 1.25 1.5 1.75 2.0 2.5 3.0 3.5 4.0 4.5 5.0 6.0 7.0 8.0 9.0 10.0]
-
-#define Camera_FPS 45.0                             //[25.0 30.0 45.0 60.0 90.0 120.0 144.0 240.0]
-#define Camera_Shutter_Speed 0                      //[0 10 20 30 40 50 60 70 80 90 100 150 200 300 400]
-
-#define Enabled_Bloom
-    #define Bloom_Exposure_Value -4.0               //[-7.0 -6.0 -5.0 -4.0 -3.0 -2.0 -1.0]
-    //#define Bloom_Intensity_Test                    //
+//Mod Support
+#define DH_Support
 
 //Antialiasing
-#define Enabled_TAA
-#define TAA_Accumulation_Shapress 60                //[0 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]
-#define TAA_Post_Processing_Sharpeness 50           //[0 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]
-#define TAA_Post_Processing_Sharpen_Limit 0.005     //[0.001 0.002 0.003 0.004 0.005 0.006 0.007 0.008 0.009]
-//#define TAA_No_Clip
+#define Enabled_Temporal_AA
+    #define TAA_Sampling_Sharpeness 70          //removed [1 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]
+    #define TAA_Post_Processing_Sharpeness 35   //[1 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]
+    #define TAA_Post_Sharpen_Limit 0.002        //[0.001 0.0015 0.002 0.0025 0.003]
+    //#define TAA_Non_Clip
+
+//Materials
+#define Parallax_Mapping
+//#define Voxel_Parallax_Mapping
+#define Parallax_Mapping_Depth_Low_Detail OFF   //[OFF Default 16 32 64 96 128 160 192 256]
+
+//Lighting
+#define GI_A_Trous_4
+#define GI_A_Trous_3
+#define GI_A_Trous_2
+#define GI_A_Trous_1
+
+//Camera Setting
+#define Enabled_Bloom
+    #define Bloom_Exporuse 3.5         //[1.0 1.5 2.0 2.5 3.0 3.5 4.0 4.5 5.0 5.5 6.0]
+
+#define White_Balance_Adjustment OFF    //[OFF 100 1000 2000 3000 4000 5000 6000 6500 7000 8000 9000 10000 11000 12000 13000]
+
+#define Camera_FPS 24                   //[8 12 24 30 40 60 90 120 144]
+#define Film_Grain 5                    //[OFF 0 1 2 3 4 5 6 7 8 9 10]
+
+#define Camera_ISO 50                  //[25 50 75 100 125 150 175 200 300 400 600 800]
+#define Camera_Auto_Exposure
+#define Camera_Exporsure_Value 0.0      //[-4.0 -3.5 -3.0 -2.5 -2.0 -1.5 -1.0 -0.75 -0.5 -0.25 0.0 0.25 0.5 0.75 1.0 1.5 2.0 2.5 3.0 3.5 4.0]
+#define Camera_Auto_Min_EV -3.0         //[-4.0 -3.5 -3.0 -2.5 -2.0 -1.5 -1.0 -0.5 0.0]
+#define Camera_Auto_Max_EV 2.0          //[0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0]
+
+#define Camera_Aperture 2.8             //[1.0 1.4 2.0 2.8 4.0 5.6 8.0 11.0 16.0 22.0 32.0 44.0 64.0]
+#define Camera_Focal_Length 0.004       //[0.001 0.002 0.003 0.004 0.005 0.006 0.007 0.008 0.009 0.01 0.02 0.03 0.04 0.05 0.06 0.07 0.08 0.09 0.1]
+
+//Lighting Setting
+#define Torch_Light_Color_R 255
+#define Torch_Light_Color_G 210
+#define Torch_Light_Color_B 165
+#define Torch_Light_Temperature 4000        //[1000 1500 2000 2500 3000 3500 4000 4500 5000 5500 6000 6500]
+
+#define Sun_Light_Luminance 1.0
+#define Moon_Light_Luminance 0.05
+
+//#define SS_Contact_Shadow_Tracing_Clip
+
+//#define Nature_Light_Exposure 0.0       //[-2.0 -1.5 -1.0 -0.5 0.0 0.5 1.0 1.5 2.0]
+#define Sky_Texture_Exposure 0.0        //[-2.0 -1.5 -1.0 -0.5 0.0 0.5 1.0 1.5 2.0]
+#define Emission_Texture_Exposure 0.5   //[-5.0 -4.0 -3.0 -2.0 -1.0 0.0 1.0 2.0 3.0 4.0 5.0]
+#define Emissive_Light_Exposure 2.0     //[-3.0 -2.0 -1.0 0.0 1.0 2.0 3.0]
+#define Shadow_Light_Exposure 1.25       //[1.0 1.54 1.73 2.0]
+
+#define Diffuse_Accumulation_Frame 20   //[0 5 10 15 20 30 40 50 60]
+
+#define World_Scale 10.0                //[1.0 2.5 5.0 7.5 10.0 12.5 15.0 17.5 20.0 30.0 40.0 50.0]
+#define Altitude_Scale 1.0              //[1.0 2.5 5.0 7.5 10.0 12.5 15.0 17.5 20.0 30.0 40.0 50.0]
+#define Altitude_Start 300.0
+
+#define Fog_Light_Extinction_Distance 1000.0
+#define High_Density_Fog_Distance_Limit 100.0
+#define Rain_Fog_Density 0.00         //
+#define Biome_Fog_Density 0.000001      //default 0.0 or 1/100 rain density
+#define Fog_Front_Scattering_Weight 0.1
+#define Fog_FrontScattering_Phase 0.8
+#define Fog_BackScattering_Phase 0.35
+    #define Fog_Moon_Light_Phase_Multiplier 0.6666
+
+#define Enabled_Lower_Clouds
+#define Lower_Clouds_Scattering 0.08    //[0.04 0.05 0.06 0.07 0.08 0.09 0.1 0.11 0.12]
+#define Lower_Clouds_Distance OFF       //[OFF 10000 15000 20000 25000 30000 35000 40000 45000 50000] not for framerate
+#define Lower_Clouds_Bottom 1000.0
+#define Lower_Clouds_Top 1500.0
+#define Lower_Clouds_Quality 24
+#define Lower_Clouds_Light_Quality 8
+    #define Lower_Clouds_Light_Tracing_Max_Distance 1200.0
+
+//#define Enabled_Medium_Clouds
+#define Medium_Clouds_Bottom 4000.0
+#define Medium_Clouds_Top 4400.0
+#define Medium_Clouds_Scattering 0.03    //[0.04 0.05 0.06 0.07 0.08 0.09 0.1 0.11 0.12]
+
+
+//
+#define Brightness_Bar 102
+#define OFF 0
+#define Low 1
+#define Medium 2
+#define High 3
+#define Ultra 4
+
+#ifdef GI_A_Trous_4
+#endif
+
+#ifdef GI_A_Trous_3
+#endif
+
+#ifdef GI_A_Trous_2
+#endif
+ 
+#ifdef GI_A_Trous_1
+#endif
+
+#ifdef Lower_Clouds_Distance
+#endif
+
+//Atmospheric Scattering
+//#define rayleigh_absorption

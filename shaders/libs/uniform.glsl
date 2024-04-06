@@ -1,18 +1,14 @@
+uniform sampler2D colortex5;
+
 uniform mat4 gbufferProjectionInverse;
 uniform mat4 gbufferProjection;
 uniform mat4 gbufferModelViewInverse;
 uniform mat4 gbufferModelView;
 
 uniform vec3 cameraPosition;
+//uniform float eyeAltitude;
 
 uniform float rainStrength;
-
-uniform float near;
-uniform float far;
-
-uniform float aspectRatio;
-uniform float viewWidth;
-uniform float viewHeight;
 
 uniform float frameTimeCounter;
 
@@ -21,84 +17,67 @@ uniform int frameCounter;
 uniform int heldBlockLightValue;
 uniform int heldBlockLightValue2;
 
+uniform ivec2 eyeBrightness;
+uniform ivec2 eyeBrightnessSmooth;
+
 uniform int isEyeInWater;
 
-vec2 resolution = vec2(viewWidth, viewHeight);
-vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
+uniform int worldTime;
 
-float ExpToLinerDepth(float depth) {
+float GetAltitude(in vec3 p) {
+    return p.y + cameraPosition.y - 63.0;
+}
+
+float GetAltitudeClip(in vec3 p, in float clip) {
+    return max(clip, GetAltitude(p));
+}
+
+vec3 GetViewPosition(in vec3 coord) {
+    vec4 p = gbufferProjectionInverse * vec4(ApplyTAAJitter(coord.xy) * 2.0 - 1.0, coord.z * 2.0 - 1.0, 1.0);
+    return p.xyz / p.w;
+}
+
+vec3 NonJitterViewPosition(in vec3 coord) {
+    vec4 p = gbufferProjectionInverse * vec4(coord.xy * 2.0 - 1.0, coord.z * 2.0 - 1.0, 1.0);
+    return p.xyz / p.w;
+}
+
+vec3 GetViewPosition(in vec2 coord, in float depth) {
+    return GetViewPosition(vec3(coord, depth));
+}
+
+vec3 GetFragCoord(in vec3 position) {
+    vec4 p = gbufferProjection * vec4(position, 1.0);
+    return p.xyz / p.w * 0.5 + 0.5;
+}
+
+float ExpToLinearDepth(float depth) {
     vec2 viewDepth = mat2(gbufferProjectionInverse[2].zw, gbufferProjectionInverse[3].zw) * vec2(depth * 2.0 - 1.0, 1.0);
     return -viewDepth.x / viewDepth.y;
 }
 
-float LinerToExpDepth(float linerDepth) {
+float LinearToExpDepth(float linerDepth) {
     vec2 expDepth = mat2(gbufferProjection[2].zw, gbufferProjection[3].zw) * vec2(-linerDepth, 1.0);
 
     return (expDepth.x / expDepth.y) * 0.5 + 0.5;
 }
 
-#if defined(MC_VERSION)
-uniform vec2 jitter;
-#else
-const vec2 R2Jitter[16] = vec2[16](
-vec2(0.2548776662466927, 0.06984029099805333),
-vec2(0.009755332493385449, 0.6396805819961064),
-vec2(0.764632998740078, 0.20952087299415956),
-vec2(0.5195106649867709, 0.7793611639922129),
-vec2(0.27438833123346384, 0.3492014549902662),
-vec2(0.029265997480155903, 0.9190417459883191),
-vec2(0.7841436637268488, 0.48888203698637245),
-vec2(0.5390213299735418, 0.05872232798442578),
-vec2(0.29389899622023474, 0.6285626189824791),
-vec2(0.04877666246692769, 0.19840290998053245),
-vec2(0.8036543287136197, 0.7682432009785858),
-vec2(0.5585319949603118, 0.33808349197663823),
-vec2(0.31340966120700564, 0.9079237829746916),
-vec2(0.0682873274536977, 0.4777640739727449),
-vec2(0.8231649937003915, 0.04760436497079823),
-vec2(0.5780426599470836, 0.6174446559688516));
-
-const vec2 HaltonJitter[16] = vec2[16](
-vec2(0.5    , 0.33333),
-vec2(0.25   , 0.66666),
-vec2(0.75   , 0.11111),
-vec2(0.125  , 0.44444),
-vec2(0.625  , 0.77777),
-vec2(0.375  , 0.22222),
-vec2(0.875  , 0.55555),
-vec2(0.0625 , 0.88888),
-vec2(0.5625 , 0.03703),
-vec2(0.3125 , 0.37037),
-vec2(0.8125 , 0.7037 ),
-vec2(0.1875 , 0.14814),
-vec2(0.6875 , 0.48148),
-vec2(0.4375 , 0.81481),
-vec2(0.9375 , 0.25925),
-vec2(0.03125, 0.59259));
-
-vec2 jitter = R2Jitter[int(mod(float(frameCounter), 16.0))] * texelSize;
-#endif
-
-vec2 ApplyTAAJitter(in vec2 coord) {
-    #ifdef Enabled_TAA
-    return coord - jitter * 0.5;
-    #else
-    return coord;
-    #endif
+vec3 CalculateVisibleNormals(in vec3 n, in vec3 e) {
+    float visible = dot(e, n);
+    float cosTheta = max(1e-2, -visible);
+    float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
+    return visible > 0.0 ? n : normalize(n * sinTheta + e * cosTheta);
 }
 
-vec2 RemovalTAAJitter(in vec2 coord) {
-    #ifdef Enabled_TAA
-    return coord + jitter * 0.5;
-    #else
-    return coord;
-    #endif   
+vec3 CalculateVisibleNormals(in vec3 n, in vec3 e, in float t) {
+    float visible = dot(e, n);
+    float cosTheta = max(1e-2, -visible);
+    float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
+    return visible > t ? n : normalize(n * sinTheta + e * cosTheta);
 }
 
-void ApplyTAAJitter(inout vec4 coord) {
-    #ifdef Enabled_TAA
-    coord.xy += jitter * coord.w;
-    #endif
+float SimpleGeometryTerm(in float angle){
+    return saturate(rescale(abs(angle), 0.05, 0.15));
 }
 
 uniform mat4 gbufferPreviousModelView; 
@@ -107,13 +86,61 @@ uniform mat4 gbufferPreviousProjection;
 uniform vec3 previousCameraPosition;
 
 vec2 GetVelocity(in vec3 coord) {
+    //vec4 velocityMap = texelFetch(colortex5, ivec2(coord.xy * resolution), 0);
+
+    coord.xy = ApplyTAAJitter(coord.xy);
+
     vec4 p = gbufferProjectionInverse * vec4(coord * 2.0 - 1.0, 1.0);
          p = gbufferModelViewInverse * vec4(p.xyz / p.w, 1.0);
          p.xyz += cameraPosition - previousCameraPosition;
          p = gbufferPreviousModelView * p;
          p = gbufferPreviousProjection * p;
-         p /= p.w;
-         p.xyz = p.xyz * 0.5 + 0.5;
+
+    //vec2 c = p.xy / p.w * 0.5 + 0.5;
     
-    return coord.xy - p.xy;
+    vec2 velocity = coord.xy - (p.xy / p.w * 0.5 + 0.5);
+    //if(velocityMap.a > 0.5) velocity = velocityMap.xy;
+
+    return velocity;
 }
+
+void RotateDirection(inout vec2 direction, in float angle) {
+    float cosTheta = cos(angle * 2.0 * Pi);
+    float sinTheta = sin(angle * 2.0 * Pi);
+
+    mat2 rotate = mat2(cosTheta, sinTheta, -sinTheta, cosTheta);
+
+    direction *= rotate;
+}
+
+/*
+uniform vec3 lightVector;
+uniform vec3 worldLightVector;
+
+uniform vec3 sunVector;
+uniform vec3 worldSunVector;
+
+uniform vec3 moonVector;
+uniform vec3 worldMoonVector;
+
+uniform vec3 upVector;
+uniform vec3 worldUpVector;
+*/
+/*
+uniform vec3 shadowLightPosition;
+uniform vec3 sunPosition;
+uniform vec3 moonPosition;
+uniform vec3 upPosition;
+
+vec3 lightVector = normalize(shadowLightPosition);
+vec3 worldLightVector = mat3(gbufferModelViewInverse) * lightVector;
+
+vec3 sunVector = normalize(sunPosition);
+vec3 worldSunVector = mat3(gbufferModelViewInverse) * sunVector;
+
+vec3 moonVector = normalize(moonPosition);
+vec3 worldMoonVector = mat3(gbufferModelViewInverse) * moonVector;
+
+vec3 upVector = normalize(upPosition);
+vec3 worldUpVector = vec3(0.0, 1.0, 0.0);
+*/
