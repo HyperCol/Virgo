@@ -401,6 +401,8 @@ void main() {
     //if(renderStage == MC_RENDER_STAGE_TERRAIN_CUTOUT || renderStage == MC_RENDER_STAGE_TERRAIN_CUTOUT_MIPPED) data.albedo = vec4(1.0, 0.0, 0.0, 1.0);
     //#endif
 
+    //data.texturedNormal = normal; data.geometryNormal = normal;
+
     GbuffersDataPacking(data);
 
     //data.data0.rgb = mat3(gbufferModelViewInverse) * direction;
@@ -442,6 +444,8 @@ void main() {
 
     //float level = log2(max(dot(ddx, ddx), dot(ddy, ddy))) * 0.5;
     //if(level > 1.0) discard;
+
+    //data.data0.rgb = color.rgb;
 
     gl_FragData[0] = data.data0;
     gl_FragData[1] = data.data1;

@@ -11,7 +11,7 @@ float SchlickFresnel(in float F0, in float F90, in float cosTheta){
 }
 
 float DistributionTerm( float ndoth, float roughness ) {
-    float a2 = max(1e-7, roughness);
+    float a2 = max(1e-7, roughness * roughness);
 	float d	 = ( ndoth * a2 - ndoth ) * ndoth + 1.0;
 	return a2 / (d * d * Pi);
 }
@@ -25,9 +25,9 @@ float SmithGGX(float cosTheta, float a2){
 float VisibilityTerm(float cosTheta1, float cosTheta2, float roughness){
     float c = 4.0 * cosTheta1 * cosTheta2 + 1e-5;
     //mark
-    float a2 = roughness * roughness;
+    float a2 = max(1e-7, roughness * roughness);
 
-    return min(1.0, SmithGGX(cosTheta1, a2) * SmithGGX(cosTheta2, a2) / c);
+    return SmithGGX(cosTheta1, a2) * SmithGGX(cosTheta2, a2) / c;
     
     /*
     float a = roughness;
@@ -39,28 +39,13 @@ float VisibilityTerm(float cosTheta1, float cosTheta2, float roughness){
     */
 }
 
-vec3 ImportanceSampleGGXN(in vec2 E, in float roughness){
-    //float a2 = roughness * roughness;
-
-    E.y *= 0.9;
-
-    float Phi = E.x * 2.0 * Pi;
-    float CosTheta = sqrt((1.0 - E.y) / ( 1.0 + (roughness - 1.0) * E.y));
-    float SinTheta = sqrt(1.0 - CosTheta * CosTheta);
-
-    vec3 H = vec3(cos(Phi) * SinTheta, sin(Phi) * SinTheta, CosTheta);
-    float D = DistributionTerm(roughness, CosTheta) * CosTheta;
-
-    return H;
-}
-
 vec4 ImportanceSampleGGX(in vec2 E, in float roughness){
-    //float a2 = roughness * roughness;
+    float a2 = max(1e-7, roughness * roughness);
 
     E.y *= 0.9;
 
     float Phi = E.x * 2.0 * Pi;
-    float CosTheta = sqrt((1.0 - E.y) / ( 1.0 + (roughness - 1.0) * E.y));
+    float CosTheta = sqrt((1.0 - E.y) / ( 1.0 + (a2 - 1.0) * E.y));
     float SinTheta = sqrt(1.0 - CosTheta * CosTheta);
 
     vec3 H = vec3(cos(Phi) * SinTheta, sin(Phi) * SinTheta, CosTheta);

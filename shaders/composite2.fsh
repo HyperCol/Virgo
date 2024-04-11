@@ -529,7 +529,7 @@ void main() {
 
     //if(n*n*(1.0 - cosTheta * cosTheta) > 1.0) color = vec3(0.0);
 
-    if(heldItemId2 == 1) color = vec3(0.0);
+    //if(heldItemId2 == 1) color = vec3(0.0);
 #if 0
     if(isWater && isEyeInWater == 0) {
         int steps = 12;

@@ -164,8 +164,7 @@ vec4 ScreenSpaceReflection(in vec3 rayStart, in vec3 rayDirection, in vec3 norma
     float flipZ = -1.0;
 
     vec3 rayEnd = rayStart + rayDirection * maxDistance;
-         rayEnd = frustumClip(rayStart * flipZ, rayEnd * flipZ, near, maxDistance, vec2(1.0) / vec2(gbufferProjection[0][0], gbufferProjection[1][1]), maxDistance);
-         rayEnd *= flipZ;
+         rayEnd = flipZ * frustumClip(rayStart * flipZ, rayEnd * flipZ, near, maxDistance, vec2(1.0) / vec2(gbufferProjection[0][0], gbufferProjection[1][1]), maxDistance);
 
     vec4    H0 = gbufferProjection * nvec4(rayStart);
     vec4    H1 = gbufferProjection * nvec4(rayEnd);
@@ -192,6 +191,7 @@ vec4 ScreenSpaceReflection(in vec3 rayStart, in vec3 rayDirection, in vec3 norma
 
     bool intersect = false;
     ivec2 hitTexel = ivec2(0.0);
+    float ltracing = 0.0;
 
     for(int i = 0; i < steps && intersect == false; i++) {
         pqk += dPQK;
@@ -228,6 +228,9 @@ vec4 ScreenSpaceReflection(in vec3 rayStart, in vec3 rayDirection, in vec3 norma
         int steps2 = 4;
         float invsteps2 = 1.0 / float(steps2);
 
+        vec4 p0 = pqk - dPQK;
+        vec4 p1 = pqk;
+
         #if 1
         pqk -= dPQK;
         dPQK *= invsteps2;
@@ -251,46 +254,11 @@ vec4 ScreenSpaceReflection(in vec3 rayStart, in vec3 rayDirection, in vec3 norma
             if(rayZmax > sampleLinear) {
                 pqk -= dPQK;
                 dPQK *= 0.5;
-            } else {
+                p1 = pqk;
             }
         }
 
-        coord = pqk.xy;
-        //alpha = 1.0;
-
-/*
-        pqk -= dPQK;
-        dPQK *= invsteps2;
-
-        for(int i = 0; i < steps2; i++) {
-            pqk += dPQK;
-
-            vec3 coord = pqk.xyz;
-                 coord.xy = coord.xy * 0.5 + 0.5;
-                 coord.z = coord.z / pqk.w;
-
-            //if(abs(coord.x - 0.5) >= 0.5 || abs(coord.y - 0.5) >= 0.5) break;
-
-            ivec2 texelPosition = ivec2(coord.xy * resolution);
-
-			float rayZmax = sqrt(coord.z * coord.z);
-
-            float sampleDepth = texelFetch(depthtex0, texelPosition, 0).x;
-            float sampleLinear = ExpToLinearDepth(sampleDepth);
-
-            if(rayZmax > sampleLinear) {
-                pqk -= dPQK;
-                dPQK *= 0.5;
-            } else {
-
-            }
-        }
-        coord = pqk.xy;// - dPQK.xy * 0.5;
-        */
         #else
-        vec4 p0 = pqk - dPQK;
-        vec4 p1 = pqk;
-
         for(int i = 0; i < steps2; i++) {
             vec4 p = p0 * 0.5 + p1 * 0.5;
 
@@ -311,18 +279,23 @@ vec4 ScreenSpaceReflection(in vec3 rayStart, in vec3 rayDirection, in vec3 norma
                 p0 = p;
             }
         }
-
-        coord = p1.xy;
         #endif
     #endif
 
-        coord = coord * 0.5 + 0.5;
+        coord = p1.xy * 0.5 + 0.5;
         ivec2 hitTexel = ivec2(coord * resolution);
 
-        float rayDepth = texelFetch(depthtex0, hitTexel, 0).x;
-        color = vec4(LinearToGamma(texelFetch(colortex3, hitTexel, 0).rgb) * MappingToHDR, rayDepth < 1.0 ? 1.0 : 0.0);
-        rayLinearDepth = ExpToLinearDepth(rayDepth);
+        float sampleDepth = texelFetch(depthtex0, hitTexel, 0).x;
+
+        if(sampleDepth < 1.0) {
+            color = vec4(LinearToGamma(texelFetch(colortex3, hitTexel, 0).rgb) * MappingToHDR, 1.0);
+            //rayLinearDepth = ExpToLinearDepth(sampleDepth);
+            //rayLinearDepth = ltracing;
+            rayLinearDepth = -p1.z / p1.w * abs(rayDirection.z) - rayStart.z;
+            //rayLinearDepth = length(nvec3(gbufferProjectionInverse * nvec4(vec3(pqk.xy / pqk.w, LinearToExpDepth(pqk.z / pqk.w) * 2.0 - 1.0))));
+        }
     }
+    
 
     return color;
 }
@@ -330,35 +303,51 @@ vec4 ScreenSpaceReflection(in vec3 rayStart, in vec3 rayDirection, in vec3 norma
 uniform float screenBrightness;
 
 void main() {
-    GbuffersData data = GetGbuffersData(texcoord);
-    VectorStruct v = CalculateVectorStruct(texcoord, texture(depthtex0, texcoord).x);
+    float fframeCounter = float(frameCounter);
+
+    const vec2[4] offset = vec2[4](vec2(0.0), vec2(1.0, 0.0), vec2(1.0, 1.0), vec2(0.0, 1.0));
+    vec2 stageJitter = float2R2(fframeCounter) * 2.0 - 1.0;
+
+    vec2 coord = texcoord;
+
+#if 1
+    #if 1
+    coord += offset[frameCounter % 4] * texelSize;
+    #else
+    coord += (float2R2(fframeCounter) * 2.0 - 1.0) * texelSize;
+    #endif
+#endif
+
+    GbuffersData data = GetGbuffersData(coord);
+    VectorStruct v = CalculateVectorStruct(coord, texture(depthtex0, coord).x);
 
     //perfect surface:smoothness=0.9999
 
     if(data.tileID == F_Water) {
         //not perfect surface
-        float smoothness = 0.999;
+        float smoothness = 0.997;
         data.roughness = pow2(1.0 - smoothness);
         data.metalness = 0.02;
     }
 
-    float fframeCounter = float(frameCounter);
-
     vec2 frameCountOffset = float2R2(fframeCounter + 0.5) * 2.0 - 1.0;
+
 #ifdef Enabled_Temporal_AA
 
 #else
     //vec2 frameCountOffset = vec2(0.0);
 #endif
 
+    //frameCountOffset = vec2(0.0);
+
     ivec2 iseed = ivec2(texcoord * resolution + frameCountOffset * 64.0);
     float dither = GetBlueNoise(iseed);
     float dither1 = GetBlueNoise1(iseed);
 
-    vec3 color = LinearToGamma(texture(colortex3, texcoord).rgb) * MappingToHDR;
+    //vec3 color = LinearToGamma(texture(colortex3, texcoord).rgb) * MappingToHDR;
 
     vec3 rayDirection = normalize(reflect(v.viewDirection, data.texturedNormal));
-    vec2 envCoord = EncodeOctahedralmap(rayDirection) * 0.5 + 0.5;
+    //vec2 envCoord = EncodeOctahedralmap(rayDirection) * 0.5 + 0.5;
 
     //store visible normal before reflection
     //vec3 worldNormal = mat3(gbufferModelViewInverse) * data.texturedNormal;
@@ -367,15 +356,18 @@ void main() {
     mat3 tbn = tbnNormal(visibleNormal);
 
     float skyVisibility = saturate(rescale(data.lightmap.y, 0.5 / 15.0, 14.0 / 15.0));
-          skyVisibility = pow(skyVisibility, 4.0);
+          skyVisibility = pow(skyVisibility, 5.0);
 
     vec3 specular = vec3(0.0);
     float weight = 0.0;
 
     float rayMinLinearDepth = maxDistance;
+
+    float resultDepth = 1.0;
+    float importantWeight = 0.0;
     
 if(v.depth < 1.0) {
-    int steps = 2;
+    int steps = 1;
     float invsteps = 1.0 / float(steps);
 
     bool prefect = false;
@@ -388,14 +380,14 @@ if(v.depth < 1.0) {
         //    rayPDF = vec4(0.0, 0.0, 1.0, 1.0);
         //}
 
-        vec3 rayNDF = normalize(tbn * rayPDF.xyz);
+        vec3 H = normalize(tbn * rayPDF.xyz);
 
-        vec3 rayDirection = normalize(reflect(v.worldDirection, rayNDF));
+        vec3 rayDirection = normalize(reflect(v.worldDirection, H));
              rayDirection = CalculateVisibleNormals(rayDirection, visibleNormal);
              rayDirection = mat3(gbufferModelView) * rayDirection;
 
-        float vdoth = abs(dot(v.worldEyeDirection, rayNDF));
-        float ndoth = saturate(dot(visibleNormal, rayNDF));
+        float vdoth = abs(dot(rayDirection, H));
+        float ndoth = saturate(dot(visibleNormal, H));
 
         float pdf = DistributionTerm(ndoth, data.roughness) * ndoth / (4.0 * vdoth + 1e-5);
 
@@ -411,7 +403,11 @@ if(v.depth < 1.0) {
         specular += mix(skyEnvmap, ssr.rgb, ssr.a) * pdf;
         weight += pdf;
 
-        rayMinLinearDepth = min(rayMinLinearDepth, rayLength);
+        if(pdf >= importantWeight) {
+            rayMinLinearDepth = min(rayMinLinearDepth, rayLength);
+            //resultDepth = nvec3(gbufferProjection * nvec4(v.viewPosition + v.viewDirection * rayLength)).z * 0.5 + 0.5;
+            importantWeight = pdf;
+        }
 
         //if(rayPDF.z > 0.9999 && pdf > 1000.0) {
             //specular = vec3(1.0, 0.0, 0.0);
@@ -425,11 +421,18 @@ if(v.depth < 1.0) {
     }
 }
 
+    //specular = vec3(resultDepth / 100.0);
+
     specular = GammaToLinear(specular * MappingToSDR);
     specular = saturate(specular);
 
+    //resultDepth = -v.viewPosition.z + abs(rayMinLinearDepth) * -v.viewDirection.z;
+    //resultDepth = v.linearDepth + sqrt(rayMinLinearDepth * rayMinLinearDepth) * -rayDirection.z;
+    resultDepth = LinearToExpDepth(rayMinLinearDepth);
+    //resultDepth = nvec3(gbufferProjection * nvec4(v.viewPosition + rayDirection * resultDepth)).z * 0.5 + 0.5;
+
     gl_FragData[0] = vec4(specular, data.roughness);
     gl_FragData[1] = vec4(texture(colortex2, texcoord).rg, v.depth, 1.0);
-    gl_FragData[2] = vec4(LinearToExpDepth(rayMinLinearDepth), vec3(1.0));
+    gl_FragData[2] = vec4(resultDepth, vec3(1.0));
 }
 /* DRAWBUFFERS:456 */

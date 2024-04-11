@@ -19,6 +19,7 @@ in vec2 texcoord;
 #include "/libs/uniform.glsl"
 #include "/libs/dither.glsl"
 #include "/libs/materialid.glsl"
+#include "/libs/tonemapping.glsl"
 #include "/libs/lighting/brdf.glsl"
 
 #if 1
@@ -165,57 +166,88 @@ vec3 GetClosest(in sampler2D tex, in vec2 coord, in float depth0) {
 }
 
 void main() {
-    vec2 coord = texcoord;
-    float depth = texture(depthtex0, coord).x;
+    //float depth = texture(depthtex0, texcoord).x;
 
     //if(depth == 1.0) {
     //    coord = GetClosest(depthtex0, texcoord, 1.0).xy;
     //}
 
-    GbuffersData data = GetGbuffersData(coord);
-
-    VectorStruct v = CalculateVectorStruct(coord, texture(depthtex0, coord).x);
+    GbuffersData data = GetGbuffersData(texcoord);
+    VectorStruct v = CalculateVectorStruct(texcoord, texture(depthtex0, texcoord).x);
 
     vec3 reflectDirection = normalize(reflect(v.viewDirection, data.texturedNormal));
     vec3 fr = SpecularLighting(reflectDirection, v.eyeDirection, data.texturedNormal, data.F0, data.roughness, 1.0);
 
-    vec3 color = LinearToGamma(texture(colortex3, texcoord).rgb) * MappingToHDR;
+    //vec3 color = LinearToGamma(texture(colortex3, texcoord).rgb) * MappingToHDR;
+    //vec2 stageJitter = float2R2(float(frameCounter));
 
-    vec2 halfCoord = min(coord * Reflection_Render_Scale, vec2(Reflection_Render_Scale) - texelSize);
+    vec2 coord = texcoord;//min(coord * Reflection_Render_Scale, vec2(Reflection_Render_Scale) - texelSize);
+
+    const vec2[4] offset = vec2[4](vec2(0.0), vec2(1.0, 0.0), vec2(1.0, 1.0), vec2(0.0, 1.0));
+
+#if 1
+    #if 1
+    coord -= offset[frameCounter % 4] * texelSize;
+    #else
+    coord -= (float2R2(float(frameCounter)) * 2.0 - 1.0) * texelSize;
+    #endif
+#endif
+
+    vec2 halfCoord = min(coord * Reflection_Render_Scale, vec2(Reflection_Render_Scale - texelSize));
+
     ivec2 texelPosition = ivec2(halfCoord * resolution);
 
     ivec2 screenClip = ivec2(resolution * Reflection_Render_Scale);
 
+    float a = data.roughness;
+
     vec3 specular = vec3(0.0);//LinearToGamma(texelFetch(colortex4, texelPosition, 0).rgb) * MappingToHDR;
+    
     float totalWeight = 0.0;
+    vec3 averageColor = vec3(0.0);
 
     float importantSample = 0.0;
     float rayDepth = 1.0;
 
     int radius = 1;
 
+#if 0
+    //specular = LinearToGamma(texture(colortex4, halfCoord).rgb) * MappingToHDR;
+    //rayDepth = texture(colortex6, halfCoord).x;
+    specular = LinearToGamma(texelFetch(colortex4, texelPosition, 0).rgb) * MappingToHDR;
+    rayDepth = texelFetch(colortex6, texelPosition, 0).x;
+#else
     for(int i = -radius; i <= radius; i++) {
         for(int j = -radius; j <= radius; j++) {
             ivec2 sampleTexel = texelPosition + ivec2(i, j);
-            //if(sampleTexel.x > )
 
             float sampleDepth = texelFetch(colortex5, sampleTexel, 0).z;
             if(sampleDepth >= 1.0) continue;
 
             vec3 sampleNormal = DecodeSpheremap(texelFetch(colortex5, sampleTexel, 0).xy);
             vec3 sampleViewPosition = GetViewPosition(texcoord + vec2(i, j) * texelSize, sampleDepth);
-            vec3 rayDirection = normalize(reflect(v.viewDirection, sampleNormal));
 
-            //float weight = GetPixelPDF(saturate(dot(sampleNormal, data.texturedNormal)), data.roughness) / max(1e-7, dot(v.eyeDirection, sampleNormal) * 4.0);
-            float weight = GetPixelPDF(v.eyeDirection, normalize(reflect(normalize(sampleViewPosition), sampleNormal)), data.texturedNormal, data.roughness);
+            float sampleRoughness = texelFetch(colortex4, sampleTexel, 0).a;
+
+            vec3 rayDirection = normalize(reflect(normalize(sampleViewPosition), sampleNormal));
+
+            float weight = GetPixelPDF(v.eyeDirection, rayDirection, data.texturedNormal, sampleRoughness);
+                  //weight = 1.0;
+                  //weight *= i == 0 && j == 0 ? 1.0 : 0.0;
+
             vec3 sampleColor = LinearToGamma(texelFetch(colortex4, sampleTexel, 0).rgb) * MappingToHDR;
 
-            specular += sampleColor * weight;
+            averageColor += sampleColor * weight;
             totalWeight += weight;
 
-            float sampleRayDepth = texelFetch(colortex6, sampleTexel, 0).x;
+            weight *= step(abs(sampleRoughness - data.roughness), 0.02);
 
             if(importantSample < weight) {
+                specular = sampleColor;
+                //totalWeight = 1.0;
+
+                float sampleRayDepth = texelFetch(colortex6, sampleTexel, 0).x;
+
                 rayDepth = sampleRayDepth;
                 importantSample = weight;
             }
@@ -223,26 +255,28 @@ void main() {
         }
     }
 
-    specular /= totalWeight == 0.0 ? 1.0 : totalWeight;
+    averageColor /= totalWeight > 0.0 ? totalWeight : 1.0;
 
+    specular = importantSample < 2e-6 ? averageColor : specular;
+#endif
     //if(hideGUI == 1) {
     //    specular = LinearToGamma(texelFetch(colortex4, texelPosition, 0).rgb) * MappingToHDR;
     //}
 
-    color += specular * fr;
-    if(hideGUI == 1) color = specular;
+    //color += specular * fr;
+    //if(hideGUI == 1) color = specular;
     //color = fr;
 
-    color = GammaToLinear(color * MappingToSDR);
+    //color = GammaToLinear(color * MappingToSDR);
+    //specular = LinearToGamma(texture(colortex3, texcoord).rgb) * MappingToHDR;
+    specular = GammaToLinear(specular);
+    specular = KarisToneMapping(specular);
 
-    specular = GammaToLinear(specular * MappingToSDR);
+    float pdf0 = GetPixelPDF(1.0, data.roughness) - 0.0;// - GetPixelPDF(1.0, pow2(1.0 - 0.95));
 
-
-    vec3 h = normalize(reflectDirection + v.eyeDirection);
-    float ndoth = saturate(dot(h, data.texturedNormal));
-    float d = DistributionTerm(ndoth, data.roughness);
-
-    gl_FragData[0] = vec4(specular, 1.0);
-    gl_FragData[1] = vec4(d >= 0.0 ? rayDepth : v.depth, vec3(1.0));
+    gl_FragData[0] = vec4(specular, data.roughness);
+    gl_FragData[1] = vec4(pdf0 >= 0.0 ? rayDepth : v.depth, vec3(1.0));
+    //gl_FragData[1] = vec4(rayDepth, vec3(1.0));
+    //gl_FragData[1] = vec4(v.depth, vec3(1.0));
 }
 /* DRAWBUFFERS:46 */
