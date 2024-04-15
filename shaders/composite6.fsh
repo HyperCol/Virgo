@@ -1,6 +1,6 @@
 #version 130
 
-#define Reflection_Render_Scale 0.5
+#define Reflection_Temporal_Upsample
 
 uniform sampler2D colortex3;
 uniform sampler2D colortex4;
@@ -141,33 +141,31 @@ VectorStruct CalculateVectorStruct(in vec2 coord, in float depth) {
     return v;
 }
 #endif
-/*
-float GetPixelPDF(in vec3 e, in vec3 r, in vec3 n, in float roughness) {
-    vec3 h = normalize(r + e);
 
-    float ndoth = max(0.0, dot(n, h));
-    float d = DistributionTerm(ndoth, roughness) * ndoth;
-
-    return max(1e-6, d);//max(d / (4.0 * abs(dot(e, h)) + 1e-6), 1e-6);
-}
-*/
+const vec2 varOffset[13] = vec2[13](
+vec2(0.0, 0.0), 
+vec2(1.0, 0.0), vec2(0.0, 1.0), vec2(-1.0, 0.0), vec2(0.0, -1.0),
+vec2(1.0, 1.0), vec2(-1.0, 1.0), vec2(-1.0, -1.0), vec2(1.0, -1.0),
+vec2(2.0, 0.0), vec2(0.0, 2.0), vec2(-2.0, 0.0), vec2(0.0, -2.0)
+);
 
 vec3 GetClosest(in sampler2D tex, in vec2 coord, in float depth0) {
     vec3 closest = vec3(0.0, 0.0, depth0);
 
     for(float i = -1.0; i <= 1.0; i += 1.0) {
         for(float j = -1.0; j <= 1.0; j += 1.0) {
-            vec2 sampleCoord = coord + vec2(i, j) * texelSize;
+            vec2 offset = vec2(i, j) * texelSize;
+            vec2 sampleCoord = coord + offset;
             float sampleDepth = texture(tex, sampleCoord).x;
             //      sampleDepth = sampleDepth >= 1.0 ? texture(dhDepthTex0, sampleCoord).x : sampleDepth;
 
             if(sampleDepth < closest.z) {
-                closest = vec3(i, j, sampleDepth);
+                closest = vec3(offset, sampleDepth);
             }
         }
     }
 
-    closest.xy = closest.xy * texelSize + coord;
+    closest.xy = closest.xy + coord;
 
     //return vec3(coord, texture(depthtex0, coord).x);
 
@@ -266,29 +264,27 @@ void ClipAABB(inout vec3 accumulation, in sampler2D tex, in vec2 coord, in float
 }
 */
 
-void StageClipAABB(inout vec3 accumulation, in sampler2D tex, in vec3 e, in vec3 i, in vec3 n, in float pdf0) {
+void StageClipAABB(inout vec3 accumulation, in sampler2D tex, in vec3 e, in vec3 i, in vec3 n, in float pdf0, in float clipMin) {
     ivec2 texelPosition = ivec2(gl_FragCoord.xy);
 
     vec3 m1 = vec3(0.0);
     vec3 m2 = vec3(0.0);
     float totalWeight = 0.0;
 
-    const float threshold = 0.001;
-    const int radius = 2;
-/*
-    for(int i = -radius; i <= radius; i++) {
-        for(int j = -radius; j <= radius; j++) {
-            ivec2 sampleTexel = texelPosition + ivec2(i, j);
+#if 1
+    for(int i = 0; i < 13; i++) {
+        ivec2 sampleTexel = texelPosition + ivec2(varOffset[i]);
 
-            vec3 sampleColor = texelFetch(tex, sampleTexel, 0).rgb;
-                 sampleColor = RGBToYCoCg(sampleColor);
+        vec3 sampleColor = texelFetch(tex, sampleTexel, 0).rgb;
+             sampleColor = RGBToYCoCg(sampleColor);
 
-            m1 += sampleColor;
-            m2 += sampleColor * sampleColor;
-            totalWeight += 1.0;
-        }
+        m1 += sampleColor;
+        m2 += sampleColor * sampleColor;
+        totalWeight += 1.0;        
     }
-*/
+#else
+    const float pdfThreshold = 0.001;
+    const int radius = 2;
 
     for(int i = -radius; i <= radius; i++) {
         for(int j = -radius; j <= radius; j++) {
@@ -308,7 +304,7 @@ void StageClipAABB(inout vec3 accumulation, in sampler2D tex, in vec3 e, in vec3
             weight = weight / (weight + pdf0) * 4.0;
             }
 
-            if(sampleDepth < 1.0 && weight >= threshold) {
+            if(sampleDepth < 1.0 && weight >= pdfThreshold) {
                 m1 += sampleColor;
                 m2 += sampleColor * sampleColor;
                 totalWeight += 1.0;
@@ -317,13 +313,18 @@ void StageClipAABB(inout vec3 accumulation, in sampler2D tex, in vec3 e, in vec3
     }
 
     totalWeight += step(totalWeight, 0.0);
+#endif
 
     m1 /= totalWeight;
     m2 /= totalWeight;
 
     vec3 variance = sqrt(max(vec3(0.0), m2 - m1 * m1));
 
-    float sigma = max(4.0, GetPixelPDF(1.0, pow2(1.0 - 0.95)) / pdf0);
+#ifdef Reflection_Temporal_Upsample
+    float sigma = clamp(GetPixelPDF(1.0, pow2(1.0 - 0.95)) / pdf0, clipMin, 10.0);
+#else
+    float sigma = clipMin;
+#endif
 
     vec3 minColor = m1 - variance * sigma;
     vec3 maxColor = m1 + variance * sigma;
@@ -403,16 +404,30 @@ vec2 CalculateDualMotionVector(in vec2 previousCoord, in float depth, in vec2 co
 void main() {
     vec2 coord = (texcoord);
 
+    float fframeCounter = float(frameCounter);
+
+    const vec2[4] offset = vec2[4](vec2(0.0), vec2(1.0, 0.0), vec2(1.0, 1.0), vec2(0.0, 1.0));
+#if 1
+    vec2 stageJitter = offset[frameCounter % 4];
+#else
+    vec3 stageJitter = vec2(0.0);
+#endif
+
     GbuffersData data = GetGbuffersData(coord);
     VectorStruct v = CalculateVectorStruct(coord, texture(depthtex0, coord).x);
+
+    data.roughness = texture(colortex4, texcoord).a;
 
     vec3 rayDirection = normalize(reflect(v.viewDirection, data.texturedNormal));
     float pdf0 = GetPixelPDF(1.0, data.roughness);
     float pdfThreshold = pdf0 - 0.0;//GetPixelPDF(1.0, pow2(1.0 - 0.7));
 
+    //view depth
     //vec3 closest = GetClosest(depthtex0, coord, 1.0);
-    vec3 closest = GetClosest(colortex6, coord, 1.0);
     //vec3 closest = vec3(coord, texture(depthtex0, coord).x);
+
+    //ray depth
+    vec3 closest = GetClosest(colortex6, coord, 1.0);
     //vec3 closest = vec3(coord, texture(colortex6, coord).x);
 
     vec2 velocity = GetVelocity(closest);
@@ -421,13 +436,16 @@ void main() {
     //vec2 velocity = GetVelocity(vec3(texcoord, texture(colortex6, texcoord).x));
          //velocity = vec2(0.0);
 
-    vec2 previousCoord = coord - velocity;
-
     vec2 previousCoord2 = coord - GetVelocity(vec3(coord, texture(depthtex0, coord).x));
     
     vec2 velocity2 = CalculateDualMotionVector(previousCoord2, texture(colortex12, PreviousToCurrentJitter(previousCoord2)).a, texcoord);
+         velocity2 *= step(vec2(1e-3), abs(velocity2));
     //vec2 velocity2 = CalculateDualMotionVector(previousCoord, texture(colortex12, PreviousToCurrentJitter(previousCoord)).b, texcoord);
-    previousCoord += velocity2;
+    //previousCoord += velocity2;
+    velocity -= velocity2;
+
+    float velocityLength = length(velocity * resolution);
+    vec2 previousCoord = coord - velocity;
 
     vec3 currentColor = texture(colortex4, coord).rgb;
 
@@ -453,97 +471,75 @@ void main() {
     vec3 previousWorldDir = (prevSampleWorldPosition - previousModelViewInverse[3].xyz) / previousViewLength;
     vec3 previousWorldNormal = DecodeOctahedralmap(texture(colortex12, previousCoord).xy);
     vec3 previousRayDir = normalize(reflect(previousWorldDir, previousWorldNormal));
-    float previousRoughness = texture(colortex12, previousCoord).b;
 
     vec3 previousColor = texture(colortex9, previousCoord).rgb;
     //vec3 previousColor = SampleHistoryCatmullRom(colortex9, previousCoord, texelSize);
 
-    //float pdf1 = GetPixelPDF(saturate(dot(data.texturedNormal, previousViewNormal)), previousRoughness);
-    
-    //float rpdf0 = pdf0 / max(1e-6, dot(rayDirection, data.texturedNormal) * 4.0);
-    //float rpdf1 = pdf1 / max(1e-6, dot(normalize(prevViewPos), data.texturedNormal) * 4.0);
-    //float rpdf0 = GetPixelPDF(v.eyeDirection, rayDirection, data.texturedNormal, data.roughness);
-    //float rpdf1 = GetPixelPDF(v.eyeDirection, previousRayDir, data.texturedNormal, previousRoughness);
-    //float rpdf0 = GetPixelPDF(1.0, max(data.roughness, 0.001)) / max(1e-6, dot(rayDirection, data.texturedNormal) * 4.0);
-    //float rpdf1 = GetPixelPDF(saturate(dot(previousViewNormal, data.texturedNormal)), max(previousRoughness, 0.001)) / max(1e-6, dot(rayDirection, previousViewNormal) * 4.0);
-
-    //float rpdfWeight = rpdf1 / (rpdf1 + rpdf0) / 0.1;
-
-    //ClipAABB(previousColor, colortex4, texcoord, 3.0);
-
     float blocker = min(previousViewLength, v.viewDistance);
-
-
+    
+#if 1
     float planeDistance = abs(dot(worldNormal, prevSampleWorldPosition - prevWorldPosition)) / blocker;
     historyLength *= exp(-12.0 * planeDistance);
 
-#if 1
-    historyLength = abs(data.roughness - previousRoughness) > 0.015 ? 1.0 : historyLength;
-    //historyLength = saturate(1.0DistributionTerm(1.0, previousRoughness) / DistributionTerm(1.0, data.roughness));
-    //historyLength *= step(abs(data.roughness - previousRoughness), 0.02);
-    //historyLength *= saturate(GetPixelPDF(saturate(dot(data.texturedNormal, DecodeSpheremap(texture(colortex12, previousCoord).xy))), data.roughness) / pdf0);
+    float rayDepth = texture(colortex6, texcoord).x;
 
-    float NoV = abs(dot(worldNormal, v.worldEyeDirection));
-    float NoVprev = abs(dot(previousWorldNormal, v.worldEyeDirection));
-    //float NoVprev = GetPixelPDF(v.worldEyeDirection, previousWorldNormal, worldNormal, 0.9999);
-    //float NoV = GetPixelPDF(v.worldEyeDirection, worldNormal, worldNormal, 0.9999);
-    float sizeQuality = (NoVprev + 1e-3) / (NoV + 1e-3); // this order because we need to fix stretching only, shrinking is OK
+    ////removed
+    //float linearRayDepth = ExpToLinearDepth(rayDepth);
+    //float previousLinearRayDepth = ExpToLinearDepth(texture(colortex12, PreviousToCurrentJitter(previousCoord)).b);
+    //historyLength *= exp(-max(0.0, abs(previousLinearRayDepth - linearRayDepth) - 1000.0) * 12.0 * step(0.05, length(velocity * resolution)));
+    
+    float previousRoughness = texture(colortex12, previousCoord).b;
+    //historyLength = abs(data.roughness - previousRoughness) > 0.5 ? 1.0 : historyLength;
+    float pdf1 = GetPixelPDF(1.0, previousRoughness);
+    float roughnessWeight = abs(pdf1 - pdf0) / min(pdf0, pdf1) * 0.01;//(1.0 - abs(pdf1 - pdf0) / min(pdf0, pdf1)) * 10.0;
+    historyLength = roughnessWeight > 1.0 ? 1.0 : historyLength;
+
+    //float NoV = abs(dot(worldNormal, v.worldEyeDirection));
+    //float NoVprev = abs(dot(previousWorldNormal, v.worldEyeDirection));
+    ////float NoVprev = GetPixelPDF(v.worldEyeDirection, previousWorldNormal, worldNormal, 0.9999);
+    ////float NoV = GetPixelPDF(v.worldEyeDirection, worldNormal, worldNormal, 0.9999);
+    //float sizeQuality = (NoVprev + 1e-3) / (NoV + 1e-3); // this order because we need to fix stretching only, shrinking is OK
 
     //sizeQuality *= sizeQuality;
     //sizeQuality *= sizeQuality;
     //float footprintQuality = 1.0 * mix(0.1, 1.0, saturate(sizeQuality));
     //historyLength *= saturate(sizeQuality / 0.9999);
 
-    //previousWorldNormal = DecodeOctahedralmap(texture(colortex12, texcoord).xy);
-
-
-    const vec2 clipA = vec2(0.01, 0.9);
-    //float aP = DistributionTerm(saturate(dot(worldNormal, previousWorldNormal)), clamp(previousRoughness, clipA.x, clipA.y));// / (1e-5 + abs(dot(v.eyeDirection, previousViewNormal)) * 4.0);
-    //float aC = DistributionTerm(1.0, clamp(data.roughness, clipA.x, clipA.y));// / (1e-5 + abs(dot(v.eyeDirection, data.texturedNormal)) * 4.0);
-    //float aP = DistributionTerm(NoVprev, clamp(previousRoughness, clipA.x, clipA.y));
-    //float aC = DistributionTerm(NoV, clamp(data.roughness, clipA.x, clipA.y));
-    float aP = GetPixelPDF(v.worldEyeDirection, previousRayDir, worldNormal, max(0.04, data.roughness));
-    float aC = GetPixelPDF(v.worldEyeDirection, mat3(gbufferModelViewInverse) * rayDirection, worldNormal, max(0.04, data.roughness));
-    //if(length(prevSampleWorldPosition - prevWorldPosition) > 1.0)
-    //historyLength *= saturate(aP / aC / 0.5 + step(length(prevSampleWorldPosition - prevWorldPosition) / blocker, 1e-3));
-    historyLength *= saturate(aP / (aP + aC) * 4.0 / min(1.0, 0.1 + length(velocity2 * resolution - velocity * resolution)));
-
-    //historyLength *= saturate(1.0 + 1e-6 - abs(data.roughness - previousRoughness) / min(data.roughness, previousRoughness));
-
-/*
-    float nPDFP = dot(previousViewNormal, data.texturedNormal);
-    float nweight = nPDFP / 0.5;
-
-    float pdfP = DistributionTerm(1.0, previousRoughness);
-    float pdfC = DistributionTerm(1.0, data.roughness);
-    historyLength * saturate(1.0 + 1e-6 - abs(pdfP - pdfC) / pdfP);
-*/
+    //const vec2 clipA = vec2(0.01, 0.9);
+    float aAdj = saturate(rescale(data.roughness, -0.04, 1.0)) - 1e-7;//max(0.04, data.roughness);
+    float aP = GetPixelPDF(v.worldEyeDirection, previousRayDir, worldNormal, aAdj);
+    float aC = GetPixelPDF(v.worldEyeDirection, mat3(gbufferModelViewInverse) * rayDirection, worldNormal, aAdj);
+    float directionWeight = aP / (aP + aC) * 2.01;
+    historyLength *= mix(saturate(directionWeight), 1.0, step(velocityLength, 0.05) * 0.9);
 
     float pdf = GetPixelPDF(v.eyeDirection, rayDirection, data.texturedNormal, data.roughness);
+    float clipMin = 2.0;
+    
+    //vec2 cbCoord = floor(gl_FragCoord.xy) - 1.0;
+    //float checkerBoard = mod(floor(cbCoord.x - stageJitter.x), 2.0) * mod(floor(cbCoord.y - stageJitter.y), 2.0);
+    ////clipMin = mix(clipMin, 1.0, checkerBoard);
+    ////historyLength *= mix(1.0, 0.5, checkerBoard);
 
-    //if(rpdfWeight * pdf0 > 50.0) {
-    if(pdfThreshold >= 0.0) {
-        //ClipAABB(previousColor, colortex4, texcoord, 1.0);
-        //ClipAABB(previousColor, colortex4, texcoord, max(1.0, DistributionTerm(1.0, pow2(1.0 - 0.99)) / pdf0));
-        StageClipAABB(previousColor, colortex4, v.eyeDirection, rayDirection, data.texturedNormal, pdf);
-    }
+    StageClipAABB(previousColor, colortex4, v.eyeDirection, rayDirection, data.texturedNormal, pdf, clipMin);
 #endif
 
     historyLength = max(1.0, historyLength);
 
-    float alpha = max(1.0 / (30.0 + 1.0), 1.0 / historyLength);
+    float alpha = max(1.0 / Reflection_Accumulation_Frame, 1.0 / historyLength);
     vec3 accumulation = mix(previousColor, currentColor, vec3(alpha));
          //accumulation = currentColor;
 
     vec3 fr = SpecularLighting(rayDirection, v.eyeDirection, data.texturedNormal, data.F0, data.roughness, 1.0);
-    //vec3 specular = LinearToGamma(accumulation);
-    vec3 specular = LinearToGamma(InverseKarisToneMapping(accumulation));
+    vec3 specular = accumulation; //specular = currentColor;
+         specular = LinearToGamma(InverseKarisToneMapping(specular));
 
     vec3 color = LinearToGamma(texture(colortex3, texcoord).rgb) * MappingToHDR;
 
     color += specular * fr;
     //if(hideGUI == 1) color = specular;
     if(hideGUI == 0) color = specular;
+
+    //color = checkerBoard * vec3(0.1);
 
     //color = saturate(pdf0 / pdf1 / 0.9999) * pdf0 / threshold >= 1.0 ? vec3(1.0, 0.0, 0.0) : vec3(1.0);
 
@@ -589,23 +585,21 @@ void main() {
     //float w1 = aP / aC / 0.9999;// + step(abs(v.linearDepth - ExpToLinearDepth(previousDepth)), 1e-3);// / clamp(length(prevSampleWorldPosition - prevWorldPosition), 1e-3, 1.0);
     //float w1 = sizeQuality / 0.9999;
     //float w1 = aP / (aP + aC) * 4.0 / min(1.0, 0.1 + length(velocity2 * resolution - velocity * resolution));
-    //color = w1 > 1.0 ? vec3(1.0, 0.0, 0.0) : vec3(saturate(w1));
-
-    //color = vec3(saturate(abs(previousWorldNormal) - abs(worldNormal)));
-
-    //color = saturate(vec3((velocity2 * resolution), 0.0));
-    //color = vec3(saturate(length(velocity2 * resolution - velocity * resolution) * 0.01));
-    //color = LinearToGamma(texture(colortex3, texcoord).rgb) * MappingToHDR;
-    //color = length(velocity2 * resolution) > 0.5 ? LinearToGamma(texture(colortex3, previousCoord2 + velocity2).rgb) * MappingToHDR : color;
-
+    //float w1 = (1.0 - abs(pdf1 - pdf0) / pdf1) * 2.0;
+    //color = w1 >= 1.0 ? vec3(1.0, 0.0, 0.0) : vec3(saturate(w1));
+    //color = abs(data.roughness - previousRoughness) > 0.015 ? vec3(0.0) : vec3(1.0);
+    
+    //specular = roughnessWeight < 1.0 ? vec3(1.0, 0.0, 0.0) : vec3(saturate(roughnessWeight));
+    //specular = directionWeight >= 1.0 ? vec3(1.0, 0.0, 0.0) : vec3(saturate(directionWeight));
+    //specular = vec3(step(0.05, velocityLength));
 
     color = GammaToLinear(color * MappingToSDR);
 
-    specular = GammaToLinear(specular) * MappingToSDR;
+    specular = saturate(GammaToLinear(specular * MappingToSDR));
 
-    gl_FragData[0] = vec4(color, 1.0);
+    gl_FragData[0] = vec4(specular, data.roughness);
     gl_FragData[1] = vec4(accumulation, historyLength / 255.0);
-    //gl_FragData[2] = vec4(EncodeOctahedralmap(worldNormal), texture(colortex6, texcoord).x, depth);
+    //gl_FragData[2] = vec4(EncodeOctahedralmap(worldNormal), rayDepth, depth);
     gl_FragData[2] = vec4(EncodeOctahedralmap(worldNormal), data.roughness, depth);
 }
-/* RENDERTARGETS:3,9,12 */
+/* RENDERTARGETS:4,9,12 */

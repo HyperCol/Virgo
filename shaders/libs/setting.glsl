@@ -38,24 +38,36 @@
 #define Camera_Focal_Length 0.004       //[0.001 0.002 0.003 0.004 0.005 0.006 0.007 0.008 0.009 0.01 0.02 0.03 0.04 0.05 0.06 0.07 0.08 0.09 0.1]
 
 //Lighting Setting
-#define Torch_Light_Color_R 255
-#define Torch_Light_Color_G 210
-#define Torch_Light_Color_B 165
-#define Torch_Light_Temperature 4000        //[1000 1500 2000 2500 3000 3500 4000 4500 5000 5500 6000 6500]
+    #define Torch_Light_Color_R 255
+    #define Torch_Light_Color_G 210
+    #define Torch_Light_Color_B 165
+    #define Torch_Light_Temperature 4000        //[1000 1500 2000 2500 3000 3500 4000 4500 5000 5500 6000 6500]
 
-#define Sun_Light_Luminance 1.0
-#define Moon_Light_Luminance 0.05
+    #define Sun_Light_Luminance 1.0
+    #define Moon_Light_Luminance 0.05
 
-//#define SS_Contact_Shadow_Tracing_Clip
+    //#define SS_Contact_Shadow_Tracing_Clip
 
-//#define Nature_Light_Exposure 0.0       //[-2.0 -1.5 -1.0 -0.5 0.0 0.5 1.0 1.5 2.0]
-#define Sky_Texture_Exposure 0.0        //[-2.0 -1.5 -1.0 -0.5 0.0 0.5 1.0 1.5 2.0]
-#define Emission_Texture_Exposure 0.5   //[-5.0 -4.0 -3.0 -2.0 -1.0 0.0 1.0 2.0 3.0 4.0 5.0]
-#define Emissive_Light_Exposure 2.0     //[-3.0 -2.0 -1.0 0.0 1.0 2.0 3.0]
-#define Shadow_Light_Exposure 1.25       //[1.0 1.54 1.73 2.0]
+    //#define Nature_Light_Exposure 0.0         //[-2.0 -1.5 -1.0 -0.5 0.0 0.5 1.0 1.5 2.0]
+    #define Sky_Texture_Exposure 0.0            //[-2.0 -1.5 -1.0 -0.5 0.0 0.5 1.0 1.5 2.0]
+    #define Emission_Texture_Exposure 0.5       //[-5.0 -4.0 -3.0 -2.0 -1.0 0.0 1.0 2.0 3.0 4.0 5.0]
+    #define Emissive_Light_Exposure 2.0         //[-3.0 -2.0 -1.0 0.0 1.0 2.0 3.0]
+    #define Shadow_Light_Exposure 1.25          //[1.0 1.54 1.73 2.0]
 
-#define Diffuse_Accumulation_Frame 20   //[0 5 10 15 20 30 40 50 60]
+    #define Diffuse_Accumulation_Frame 20       //[0 5 10 15 20 30 40 50 60]
 
+    #define Reflection_Temporal_Accumulation
+    #define Reflection_Accumulation_Frame 30.0  //[1.0 10.0 20.0 30.0 40.0 50.0 60.0]
+    //#define Upsample_Setting_In_Option_Screen
+
+    #define Relfection_Atrous_Filter_1
+    #define Relfection_Atrous_Filter_2
+    #define Relfection_Atrous_Filter_3
+
+    //remove
+    //#define Reflection_Accumulution_Clip Medium //[Medium High] 
+
+//World Setting
 #define World_Scale 10.0                //[1.0 2.5 5.0 7.5 10.0 12.5 15.0 17.5 20.0 30.0 40.0 50.0]
 #define Altitude_Scale 1.0              //[1.0 2.5 5.0 7.5 10.0 12.5 15.0 17.5 20.0 30.0 40.0 50.0]
 #define Altitude_Start 300.0

@@ -865,7 +865,7 @@ void main() {
 
     vec3 rayStart = v.worldPosition;
     vec3 tracedNormal = v.worldNormal;
-
+#if 0
     if(ssdoHit) {
         //diffuse = vec3(0.0);
         
@@ -906,7 +906,8 @@ void main() {
         tracedNormal = worldNormal;
         */
     }
-    
+    #endif
+
     vec3 diffuse = vec3(1.0);
     //diffuse *= LinearToGamma(texture(colortex4, envmapCoord).rgb) * MappingToHDR;
     //diffuse *= CalculateSkyLighting(v.worldGeometryNormal);

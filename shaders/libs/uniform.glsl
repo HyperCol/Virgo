@@ -58,8 +58,13 @@ float ExpToLinearDepth(float depth) {
 
 float LinearToExpDepth(float linerDepth) {
     vec2 expDepth = mat2(gbufferProjection[2].zw, gbufferProjection[3].zw) * vec2(-linerDepth, 1.0);
-
     return (expDepth.x / expDepth.y) * 0.5 + 0.5;
+}
+
+void SimpleHandDepthFix(inout float depth) {
+    #ifdef MC_HAND_DEPTH
+    depth = depth - MC_HAND_DEPTH * 0.5 - 0.5 < 0.0 ? (depth * 2.0 - 1.0) / MC_HAND_DEPTH * 0.5 + 0.5 : depth;
+    #endif
 }
 
 vec3 CalculateVisibleNormals(in vec3 n, in vec3 e) {
@@ -69,11 +74,9 @@ vec3 CalculateVisibleNormals(in vec3 n, in vec3 e) {
     return visible > 0.0 ? n : normalize(n * sinTheta + e * cosTheta);
 }
 
-vec3 CalculateVisibleNormals(in vec3 n, in vec3 e, in float t) {
+vec3 CalculateVisibleNormals2(in vec3 n, in vec3 e) {
     float visible = dot(e, n);
-    float cosTheta = max(1e-2, -visible);
-    float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
-    return visible > t ? n : normalize(n * sinTheta + e * cosTheta);
+    return visible > 0.0 ? n : normalize(n + e);
 }
 
 float SimpleGeometryTerm(in float angle){

@@ -72,7 +72,7 @@ void GbuffersDataPacking(inout GbuffersData data) {
 
     data.data0 = data.albedo;
     data.data1 = vec4(pack2x8(data.smoothness, data.metalness), pack2x8(data.lightmap), pack2x8(data.emissive, adjTileID), 1.0);
-    data.data2 = vec4(EncodeSpheremap(data.texturedNormal), 0.0, 1.0);
+    data.data2 = vec4(EncodeSpheremap(data.texturedNormal), EncodeSpheremap(data.geometryNormal));
 }
 
 GbuffersData DeafultGbuffersData(in vec2 coord, in vec2 lmcoord, in vec3 normal, in vec4 vertexColor, in vec2 ddx, in vec2 ddy) {

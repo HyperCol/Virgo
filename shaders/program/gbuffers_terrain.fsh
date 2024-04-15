@@ -403,6 +403,8 @@ void main() {
 
     //data.texturedNormal = normal; data.geometryNormal = normal;
 
+    //data.smoothness = 0.999;
+
     GbuffersDataPacking(data);
 
     //data.data0.rgb = mat3(gbufferModelViewInverse) * direction;

@@ -1,6 +1,12 @@
 #version 130
 
+#define Reflection_Temporal_Upsample
+
+#ifdef Reflection_Temporal_Upsample
 #define Reflection_Render_Scale 0.5
+#else
+#define Reflection_Render_Scale 1.0
+#endif
 
 uniform sampler2D colortex3;
 uniform sampler2D colortex4;
@@ -185,12 +191,8 @@ void main() {
 
     const vec2[4] offset = vec2[4](vec2(0.0), vec2(1.0, 0.0), vec2(1.0, 1.0), vec2(0.0, 1.0));
 
-#if 1
-    #if 1
+#ifdef Reflection_Temporal_Upsample
     coord -= offset[frameCounter % 4] * texelSize;
-    #else
-    coord -= (float2R2(float(frameCounter)) * 2.0 - 1.0) * texelSize;
-    #endif
 #endif
 
     vec2 halfCoord = min(coord * Reflection_Render_Scale, vec2(Reflection_Render_Scale - texelSize));
@@ -211,7 +213,7 @@ void main() {
 
     int radius = 1;
 
-#if 0
+#ifndef Reflection_Temporal_Upsample
     //specular = LinearToGamma(texture(colortex4, halfCoord).rgb) * MappingToHDR;
     //rayDepth = texture(colortex6, halfCoord).x;
     specular = LinearToGamma(texelFetch(colortex4, texelPosition, 0).rgb) * MappingToHDR;
@@ -231,7 +233,7 @@ void main() {
 
             vec3 rayDirection = normalize(reflect(normalize(sampleViewPosition), sampleNormal));
 
-            float weight = GetPixelPDF(v.eyeDirection, rayDirection, data.texturedNormal, sampleRoughness);
+            float weight = GetPixelPDF(v.eyeDirection, rayDirection, data.texturedNormal, data.roughness);
                   //weight = 1.0;
                   //weight *= i == 0 && j == 0 ? 1.0 : 0.0;
 
@@ -259,24 +261,19 @@ void main() {
 
     specular = importantSample < 2e-6 ? averageColor : specular;
 #endif
-    //if(hideGUI == 1) {
-    //    specular = LinearToGamma(texelFetch(colortex4, texelPosition, 0).rgb) * MappingToHDR;
-    //}
 
-    //color += specular * fr;
-    //if(hideGUI == 1) color = specular;
-    //color = fr;
-
-    //color = GammaToLinear(color * MappingToSDR);
-    //specular = LinearToGamma(texture(colortex3, texcoord).rgb) * MappingToHDR;
+#ifdef Reflection_Temporal_Accumulation
     specular = GammaToLinear(specular);
     specular = KarisToneMapping(specular);
+#else
+    specular = GammaToLinear(specular * MappingToSDR);
+#endif
 
-    float pdf0 = GetPixelPDF(1.0, data.roughness) - 0.0;// - GetPixelPDF(1.0, pow2(1.0 - 0.95));
+    float pdf0 = GetPixelPDF(1.0, data.roughness) - 1.0;// - GetPixelPDF(1.0, pow2(1.0 - 0.95));
 
     gl_FragData[0] = vec4(specular, data.roughness);
-    gl_FragData[1] = vec4(pdf0 >= 0.0 ? rayDepth : v.depth, vec3(1.0));
-    //gl_FragData[1] = vec4(rayDepth, vec3(1.0));
+    //gl_FragData[1] = vec4(pdf0 >= 0.0 ? rayDepth : v.depth, vec3(1.0));
+    gl_FragData[1] = vec4(rayDepth, vec3(1.0));
     //gl_FragData[1] = vec4(v.depth, vec3(1.0));
 }
 /* DRAWBUFFERS:46 */

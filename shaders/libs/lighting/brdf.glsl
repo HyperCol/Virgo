@@ -60,15 +60,15 @@ float GetPixelPDF(in vec3 e, in vec3 r, in vec3 n, in float roughness) {
     float ndoth = max(0.0, dot(n, h));
     float d = DistributionTerm(ndoth, roughness) * ndoth;
 
-    return max(1e-5, d);//max(d / (4.0 * abs(dot(e, h)) + 1e-6), 1e-6);
+    return max(1e-6, d);//max(d / (4.0 * abs(dot(e, h)) + 1e-6), 1e-6);
 }
 
 float GetPixelPDF(in float cosTheta, in float roughness) {
     float d = DistributionTerm(cosTheta, roughness) * cosTheta;
 
-    return max(0.0, d);
+    return max(1e-6, d);
 }
-
+/*
 vec3 SpecularLighting(in vec3 L, in vec3 E, in vec3 normal, in vec3 F0, in float roughness) {
     float ndotv = max(0.0, dot(normal, E));
     float ndotl = max(0.0, dot(normal, L));
@@ -91,7 +91,7 @@ if(ndotl > 0.0 && ndotv > 0.0) {
 
     return specular;
 }
-
+*/
 vec3 SpecularLighting(in vec3 L, in vec3 E, in vec3 normal, in vec3 F0, in float roughness, in float clip) {
     float ndotv = max(0.0, dot(normal, E));
     float ndotl = max(0.0, dot(normal, L));
